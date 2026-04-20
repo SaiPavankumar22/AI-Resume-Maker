@@ -1,0 +1,12 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+pymongo==4.10.1
+python-multipart==0.0.17
+openai==1.57.0
+pydantic==2.10.3
+python-dotenv==1.0.1
+
+# ── LaTeX Compilation (no system MiKTeX / TeX Live required) ─────────────────
+xhtml2pdf==0.2.16       # HTML → PDF, pure Python (fallback engine)
+pypandoc-binary         # bundled pandoc binary — no apt/brew/choco needed
+pypandoc==1.15          # pandoc Python bindings (LaTeX → HTML for fallback)

@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ResumeForge — Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d0f0e;
+    --bg2: #141714;
+    --bg3: #1c201c;
+    --bg4: #242824;
+    --border: #2e342e;
+    --border2: #3a403a;
+    --accent: #a8e063;
+    --accent2: #7bc940;
+    --accent-dim: rgba(168,224,99,0.12);
+    --text: #e8ede8;
+    --text2: #9aa89a;
+    --text3: #6a766a;
+    --red: #e06363;
+    --amber: #e0b863;
+    --radius: 6px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---- TOPBAR ---- */
+  .topbar {
+    height: 52px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    flex-shrink: 0;
+    z-index: 50;
+  }
+
+  .topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    margin-right: 8px;
+  }
+
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 5px;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    color: #0d0f0e;
+  }
+
+  .logo-text {
+    font-family: 'DM Serif Display', serif;
+    font-size: 17px;
+    color: var(--text);
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .topbar-sep {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+
+  .tpl-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    padding: 3px 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar-spacer { flex: 1; }
+
+  .topbar-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text3);
+    transition: background 0.3s;
+  }
+
+  .status-dot.loading { background: var(--amber); animation: pulse-dot 0.8s ease-in-out infinite; }
+  .status-dot.success { background: var(--accent); }
+  .status-dot.error { background: var(--red); }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s, transform 0.1s, opacity 0.15s;
+  }
+
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-generate {
+    background: var(--accent);
+    color: #0d0f0e;
+    font-weight: 600;
+  }
+
+  .btn-generate:hover:not(:disabled) { background: var(--accent2); }
+
+  .btn-download {
+    background: var(--bg4);
+    color: var(--text2);
+    border: 1px solid var(--border2);
+  }
+
+  .btn-download:hover:not(:disabled) { color: var(--text); border-color: var(--accent); }
+
+  .btn-back {
+    background: none;
+    color: var(--text3);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  .btn-back:hover { color: var(--text2); border-color: var(--border2); }
+
+  /* ---- WORKSPACE ---- */
+  .workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ---- LEFT PANEL ---- */
+  .panel-left {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  /* ---- TABS ---- */
+  .tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+
+  .tab-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text3);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .tab-btn:hover:not(.active) { color: var(--text2); }
+
+  .tab-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+  .tab-panel.active { display: flex; }
+
+  /* ---- FORM PANEL ---- */
+  .form-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  input[type="text"], textarea {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
+    line-height: 1.5;
+  }
+
+  input:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(168,224,99,0.08);
+  }
+
+  textarea { resize: vertical; min-height: 64px; }
+
+  /* ---- CHAT PANEL ---- */
+  .chat-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .chat-msg {
+    display: flex;
+    gap: 10px;
+    animation: msgIn 0.2s ease;
+  }
+
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg-avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
+  .msg-avatar.user {
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+  }
+
+  .msg-avatar.ai {
+    background: var(--accent);
+    color: #0d0f0e;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .msg-content {
+    flex: 1;
+  }
+
+  .msg-role {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text3);
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .msg-text {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.6;
+    background: var(--bg3);
+    padding: 10px 14px;
+    border-radius: 0 8px 8px 8px;
+    border: 1px solid var(--border);
+  }
+
+  .chat-msg.user .msg-text {
+    background: var(--accent-dim);
+    border-color: rgba(168,224,99,0.2);
+    color: var(--text);
+    border-radius: 8px 0 8px 8px;
+  }
+
+  .typing-indicator .msg-text {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 12px 16px;
+  }
+
+  .typing-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text3);
+    animation: typingBounce 1s ease-in-out infinite;
+  }
+
+  .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes typingBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  .chat-input-area {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .chat-input {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 9px 14px;
+    border-radius: var(--radius);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .chat-input:focus { border-color: var(--accent); }
+
+  .chat-send-btn {
+    background: var(--accent);
+    color: #0d0f0e;
+    border: none;
+    border-radius: var(--radius);
+    padding: 9px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+
+  .chat-send-btn:hover:not(:disabled) { background: var(--accent2); }
+  .chat-send-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* ---- EDITOR PANEL ---- */
+  .editor-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .editor-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+
+  .editor-info {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+  }
+
+  .latex-editor {
+    flex: 1;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 1.65;
+    border: none;
+    outline: none;
+    padding: 16px;
+    resize: none;
+    width: 100%;
+    overflow-y: auto;
+    tab-size: 2;
+  }
+
+  .latex-editor::placeholder { color: var(--text3); }
+
+  /* ---- RIGHT PANEL ---- */
+  .panel-right {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg3);
+  }
+
+  .preview-toolbar {
+    height: 42px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .preview-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    flex: 1;
+  }
+
+  .pdf-frame {
+    flex: 1;
+    border: none;
+    background: #525659;
+    display: block;
+  }
+
+  .preview-placeholder {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: var(--text3);
+    padding: 40px;
+  }
+
+  .preview-placeholder-icon {
+    width: 80px; height: 100px;
+    background: var(--bg4);
+    border: 2px dashed var(--border2);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    opacity: 0.5;
+  }
+
+  .preview-placeholder p {
+    font-size: 13px;
+    text-align: center;
+    line-height: 1.6;
+    max-width: 240px;
+    color: var(--text3);
+  }
+
+  .preview-placeholder strong {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* ---- RESIZE HANDLE ---- */
+  .resize-handle {
+    width: 4px;
+    background: var(--border);
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: background 0.15s;
+    position: relative;
+    z-index: 10;
+  }
+
+  .resize-handle:hover { background: var(--accent); }
+
+  /* ---- BOTTOM STATUS BAR ---- */
+  .statusbar {
+    height: 24px;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  .statusbar-item {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .statusbar-item.accent { color: var(--accent); }
+
+  /* ---- TOAST ---- */
+  .toast-container {
+    position: fixed;
+    bottom: 36px;
+    right: 20px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .toast {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-size: 12px;
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: toastIn 0.25s ease;
+    max-width: 300px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+  }
+
+  .toast.success { border-left: 3px solid var(--accent); }
+  .toast.error { border-left: 3px solid var(--red); }
+  .toast.info { border-left: 3px solid var(--amber); }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---- SCROLLBAR ---- */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 900px) {
+    .workspace { flex-direction: column; }
+    .panel-left, .panel-right { width: 100%; height: 50%; }
+    .resize-handle { width: 100%; height: 4px; cursor: row-resize; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <a href="/ai%20resume-frontend/index.html" class="topbar-logo">
+    <div class="logo-icon">R</div>
+    <span class="logo-text">Resume<span>Forge</span></span>
+  </a>
+  <div class="topbar-sep"></div>
+  <span class="tpl-badge" id="tplBadge">Loading template…</span>
+  <div class="topbar-spacer"></div>
+  <div class="topbar-status">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Ready</span>
+  </div>
+  <div class="topbar-sep"></div>
+  <button class="btn btn-download" id="downloadBtn" disabled>
+    ↓ Download PDF
+  </button>
+  <button class="btn btn-generate" id="generateBtn">
+    ⚡ Generate
+  </button>
+  <a href="/ai%20resume-frontend/index.html" class="btn btn-back">← Templates</a>
+</div>
+
+<!-- WORKSPACE -->
+<div class="workspace" id="workspace">
+
+  <!-- LEFT PANEL -->
+  <div class="panel-left" id="panelLeft">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="form">👤 Profile</button>
+      <button class="tab-btn" data-tab="chat">💬 AI Chat</button>
+      <button class="tab-btn" data-tab="editor">📝 LaTeX</button>
+    </div>
+
+    <!-- FORM TAB -->
+    <div class="tab-panel active" id="tab-form">
+      <div class="form-scroll">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="f-name" placeholder="Jane Doe" />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="text" id="f-email" placeholder="jane@example.com" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="text" id="f-phone" placeholder="+1 555 000 0000" />
+          </div>
+          <div class="form-group">
+            <label>Location (Optional)</label>
+            <input type="text" id="f-location" placeholder="San Francisco, CA" />
+          </div>
+        </div>
+        <div class="form-group full">
+          <label>Skills</label>
+          <textarea id="f-skills" style="min-height:72px;" placeholder="Python, TypeScript, React, Docker, AWS, Machine Learning…"></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Experience</label>
+          <textarea id="f-experience" style="min-height:100px;" placeholder="Senior Engineer at Acme Corp (2021–present): Led development of…"></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Projects</label>
+          <textarea id="f-projects" style="min-height:80px;" placeholder="ResumeForge (2024): AI-powered resume builder with LaTeX backend…"></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Education (Optional)</label>
+          <textarea id="f-education" style="min-height:64px;" placeholder="B.S. Computer Science, MIT, 2019…"></textarea>
+        </div>
+        <button class="btn btn-generate" id="generateBtn2" style="width:100%; justify-content:center; padding:10px;">
+          ⚡ Generate Resume
+        </button>
+      </div>
+    </div>
+
+    <!-- CHAT TAB -->
+    <div class="tab-panel" id="tab-chat">
+      <div class="chat-wrap">
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-msg">
+            <div class="msg-avatar ai">AI</div>
+            <div class="msg-content">
+              <div class="msg-role">ResumeForge AI</div>
+              <div class="msg-text">Hi! Fill in your profile details and click <strong>Generate</strong> — or give me specific instructions here. Try: <em>"Make my experience more impactful"</em> or <em>"Add a summary section at the top"</em>.</div>
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-area">
+          <input class="chat-input" id="chatInput" type="text" placeholder="Improve my experience section…" />
+          <button class="chat-send-btn" id="chatSendBtn">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LATEX EDITOR TAB -->
+    <div class="tab-panel" id="tab-editor">
+      <div class="editor-wrap">
+        <div class="editor-toolbar">
+          <span class="editor-info" id="editorInfo">— lines</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-download" id="compilePreviewBtn" style="font-size:11px;padding:4px 10px;background:var(--accent);color:#0d0f0e;font-weight:600;">▶ Compile Preview</button>
+            <button class="btn btn-download" id="copyLatexBtn" style="font-size:11px;padding:4px 10px;">Copy</button>
+          </div>
+        </div>
+        <textarea class="latex-editor" id="latexEditor" placeholder="% LaTeX code will appear here after generation…
+% You can also edit it directly and click Generate.
+
+\documentclass{article}
+\begin{document}
+Hello, World!
+\end{document}"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESIZE HANDLE -->
+  <div class="resize-handle" id="resizeHandle"></div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel-right" id="panelRight">
+    <div class="preview-toolbar">
+      <span class="preview-title">PDF Preview</span>
+    </div>
+    <iframe class="pdf-frame" id="pdfFrame" style="display:none;"></iframe>
+    <div class="preview-placeholder" id="previewPlaceholder">
+      <div class="preview-placeholder-icon">📄</div>
+      <p>Your PDF preview will appear here.<br/>Edit the LaTeX code and click <strong>Compile Preview</strong> to see the results.</p>
+    </div>
+  </div>
+</div>
+
+<!-- STATUSBAR -->
+<div class="statusbar">
+  <div class="statusbar-item accent" id="sb-tpl">Template: —</div>
+  <div class="statusbar-item" id="sb-lines">Lines: 0</div>
+  <div class="statusbar-item" id="sb-last">Last generated: —</div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const BASE = 'http://localhost:8000';
+
+// State
+let state = {
+  templateId: null,
+  templateName: '—',
+  latexCode: '',
+  pdfId: null,
+  generating: false,
+  compiling: false,
+  debounceTimer: null,
+};
+
+// DOM refs
+const latexEditor = document.getElementById('latexEditor');
+const pdfFrame = document.getElementById('pdfFrame');
+const pdfPlaceholder = document.getElementById('previewPlaceholder');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const tplBadge = document.getElementById('tplBadge');
+const downloadBtn = document.getElementById('downloadBtn');
+const generateBtn = document.getElementById('generateBtn');
+const generateBtn2 = document.getElementById('generateBtn2');
+const editorInfo = document.getElementById('editorInfo');
+const sbTpl = document.getElementById('sb-tpl');
+const sbLines = document.getElementById('sb-lines');
+const sbLast = document.getElementById('sb-last');
+
+// ---- UTILS ----
+function toast(msg, type = 'success') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function setStatus(state_str) {
+  statusDot.className = 'status-dot ' + state_str;
+  const labels = { loading: 'Generating…', success: 'Ready', error: 'Error', '': 'Ready' };
+  statusText.textContent = labels[state_str] || state_str;
+}
+
+function updateEditorStats() {
+  const lines = latexEditor.value.split('\n').length;
+  editorInfo.textContent = `${lines} lines`;
+  sbLines.textContent = `Lines: ${lines}`;
+}
+
+function formatTime(d = new Date()) {
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function getUserData() {
+  return {
+    name: document.getElementById('f-name').value,
+    email: document.getElementById('f-email').value,
+    phone: document.getElementById('f-phone').value,
+    skills: document.getElementById('f-skills').value,
+    experience: document.getElementById('f-experience').value,
+    projects: document.getElementById('f-projects').value,
+    education: document.getElementById('f-education').value || '',
+  };
+}
+
+// ---- COMPILE & PREVIEW ----
+async function compileAndPreview(latexCode) {
+  if (state.compiling) return;
+  
+  state.compiling = true;
+  console.log('Compiling LaTeX...');
+  
+  try {
+    const res = await fetch(`${BASE}/compile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ latex_code: latexCode }),
+    });
+    
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error('Compilation error:', err);
+      setStatus('error');
+      addChatMessage('system', `❌ Compilation error: ${err.log || 'Unknown error'}`);
+      return;
+    }
+    
+    const data = await res.json();
+    console.log('Compilation result:', data);
+    
+    if (data.success && data.pdf_url) {
+      loadPDF(data.pdf_url);
+      setStatus('ready');
+      toast('✓ Preview compiled successfully', 'success');
+    } else {
+      setStatus('error');
+      if (data.log) {
+        console.error('LaTeX compilation log:', data.log);
+        // Check if pdflatex is missing
+        if (data.log.includes('pdflatex') || data.log.includes('not installed')) {
+          addChatMessage('system', `❌ LaTeX Error: pdflatex is not installed. Please install TeX Live from https://www.tug.org/texlive/ or MiKTeX from https://miktex.org/`);
+          toast('❌ pdflatex not installed. See chat for installation instructions.', 'error');
+        } else {
+          // Show error excerpt
+          const errorMsg = data.log.substring(0, 200).replace(/\n/g, ' ');
+          addChatMessage('system', `❌ LaTeX Error: ${errorMsg}...`);
+          toast('❌ LaTeX compilation failed. Check chat for details.', 'error');
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Compilation failed:', e);
+    setStatus('error');
+  } finally {
+    state.compiling = false;
+  }
+}
+
+function debouncedCompile() {
+  clearTimeout(state.debounceTimer);
+  state.debounceTimer = setTimeout(() => {
+    const latexCode = latexEditor.value;
+    if (latexCode.trim()) {
+      compileAndPreview(latexCode);
+    }
+  }, 1500); // Compile 1.5s after user stops typing
+}
+
+// ---- TABS ----
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ---- LOAD TEMPLATE ----
+async function loadTemplate(id) {
+  try {
+    console.log('Loading template with id:', id);
+    const res = await fetch(`${BASE}/templates`);
+    if (!res.ok) throw new Error('Cannot fetch templates');
+    const templates = await res.json();
+    const tpl = templates.find(t => t.id === id);
+    if (!tpl) {
+      console.error('Template not found. Available templates:', templates.map(t => t.id));
+      toast('Template not found.', 'error');
+      tplBadge.textContent = 'Unknown template';
+      return;
+    }
+    state.templateId = id;  // Ensure it's preserved
+    state.templateName = tpl.name;
+    tplBadge.textContent = tpl.name;
+    sbTpl.textContent = `Template: ${tpl.name}`;
+    if (tpl.latex_code) {
+      latexEditor.value = tpl.latex_code;
+      updateEditorStats();
+      // Immediately compile the template to show preview
+      await compileAndPreview(tpl.latex_code);
+    }
+    console.log('Template loaded successfully:', tpl.name, 'ID:', id);
+    toast(`Template "${tpl.name}" loaded`, 'success');
+  } catch (e) {
+    console.error('Failed to load template:', e);
+    toast('Failed to connect to backend.', 'error');
+    tplBadge.textContent = 'Backend offline';
+  }
+}
+
+// ---- GENERATE ----
+async function generate(chatInstruction = '') {
+  if (state.generating) return;
+  
+  // Validate template_id is set
+  if (!state.templateId) {
+    toast('No template selected. Please go back and select one.', 'error');
+    console.error('Cannot generate: state.templateId is', state.templateId);
+    return;
+  }
+  
+  state.generating = true;
+  generateBtn.disabled = true;
+  generateBtn2.disabled = true;
+  setStatus('loading');
+
+  console.log('Generating resume with template_id:', state.templateId);
+  const payload = {
+    template_id: state.templateId,
+    user_data: getUserData(),
+    chat_instruction: chatInstruction,
+  };
+
+  // If we have existing latex, include it
+  if (latexEditor.value.trim()) {
+    payload.latex_code = latexEditor.value;
+  }
+
+  try {
+    const res = await fetch(`${BASE}/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error('Server error response:', err);
+      throw new Error(err.detail || `Server error ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    if (data.latex_code) {
+      latexEditor.value = data.latex_code;
+      updateEditorStats();
+    }
+
+    if (data.pdf_url) {
+      const pdfId = data.pdf_url.split('/').pop();
+      state.pdfId = pdfId;
+      loadPDF(BASE + data.pdf_url);
+      downloadBtn.disabled = false;
+      sbLast.textContent = `Last generated: ${formatTime()}`;
+    }
+
+    setStatus('success');
+    toast('Resume generated!', 'success');
+
+    // Auto-switch to LaTeX tab
+    document.querySelector('[data-tab="editor"]').click();
+
+  } catch (e) {
+    setStatus('error');
+    toast(`Generation failed: ${e.message}`, 'error');
+    addChatMessage('ai', `❌ Generation failed: ${e.message}`);
+  } finally {
+    state.generating = false;
+    generateBtn.disabled = false;
+    generateBtn2.disabled = false;
+  }
+}
+
+function loadPDF(url) {
+  pdfPlaceholder.style.display = 'none';
+  pdfFrame.style.display = 'block';
+  pdfFrame.src = url;
+}
+
+// ---- CHAT ----
+function addChatMessage(role, text) {
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-msg ' + role;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'msg-avatar ' + role;
+  if (role === 'user') {
+    avatar.textContent = '👤';
+  } else if (role === 'system') {
+    avatar.textContent = '⚙️';
+  } else {
+    avatar.textContent = 'AI';
+  }
+
+  const content = document.createElement('div');
+  content.className = 'msg-content';
+  const roleText = role === 'user' ? 'You' : role === 'system' ? 'System' : 'ResumeForge AI';
+  content.innerHTML = `
+    <div class="msg-role">${roleText}</div>
+    <div class="msg-text">${text}</div>`;
+
+  wrap.appendChild(avatar);
+  wrap.appendChild(content);
+  chatMessages.appendChild(wrap);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return wrap;
+}
+
+function addTypingIndicator() {
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-msg typing-indicator';
+  wrap.innerHTML = `
+    <div class="msg-avatar ai">AI</div>
+    <div class="msg-content">
+      <div class="msg-role">ResumeForge AI</div>
+      <div class="msg-text">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>`;
+  chatMessages.appendChild(wrap);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return wrap;
+}
+
+async function sendChat() {
+  const instruction = chatInput.value.trim();
+  if (!instruction) return;
+
+  chatInput.value = '';
+  addChatMessage('user', instruction);
+
+  const typing = addTypingIndicator();
+  document.getElementById('chatSendBtn').disabled = true;
+
+  // Switch to chat tab
+  document.querySelector('[data-tab="chat"]').click();
+
+  try {
+    await generate(instruction);
+    typing.remove();
+    addChatMessage('ai', `Done! Applied: <em>"${instruction}"</em>. Check the LaTeX editor and PDF preview.`);
+  } catch (e) {
+    typing.remove();
+    addChatMessage('ai', `❌ Something went wrong. Try again.`);
+  } finally {
+    document.getElementById('chatSendBtn').disabled = false;
+  }
+}
+
+chatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+});
+
+document.getElementById('chatSendBtn').addEventListener('click', sendChat);
+
+// ---- GENERATE BUTTONS ----
+generateBtn.addEventListener('click', () => generate());
+generateBtn2.addEventListener('click', () => generate());
+
+// ---- COMPILE BUTTON ----
+document.getElementById('compilePreviewBtn').addEventListener('click', () => {
+  const latexCode = latexEditor.value;
+  if (!latexCode.trim()) {
+    toast('LaTeX code is empty', 'error');
+    return;
+  }
+  compileAndPreview(latexCode);
+});
+
+// ---- DOWNLOAD ----
+downloadBtn.addEventListener('click', () => {
+  if (!state.pdfId) return;
+  window.open(`${BASE}/download/${state.pdfId}`, '_blank');
+});
+
+// ---- COPY LATEX ----
+document.getElementById('copyLatexBtn').addEventListener('click', () => {
+  navigator.clipboard.writeText(latexEditor.value);
+  toast('LaTeX copied to clipboard!');
+});
+
+// ---- LATEX EDITOR EVENTS ----
+latexEditor.addEventListener('input', () => {
+  updateEditorStats();
+  // Editor is now just for manual editing - no auto-compile
+});
+
+// ---- RESIZE ----
+const handle = document.getElementById('resizeHandle');
+let resizing = false;
+let startX = 0;
+let startLeftW = 0;
+
+handle.addEventListener('mousedown', e => {
+  resizing = true;
+  startX = e.clientX;
+  startLeftW = document.getElementById('panelLeft').offsetWidth;
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+});
+
+document.addEventListener('mousemove', e => {
+  if (!resizing) return;
+  const dx = e.clientX - startX;
+  const workspace = document.getElementById('workspace');
+  const total = workspace.offsetWidth;
+  let newLeft = startLeftW + dx;
+  newLeft = Math.max(280, Math.min(total - 280, newLeft));
+  document.getElementById('panelLeft').style.width = newLeft + 'px';
+  document.getElementById('panelRight').style.width = (total - newLeft - 4) + 'px';
+});
+
+document.addEventListener('mouseup', () => {
+  if (resizing) {
+    resizing = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }
+});
+
+// ---- TAB key in textarea ----
+latexEditor.addEventListener('keydown', e => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const s = latexEditor.selectionStart;
+    const v = latexEditor.value;
+    latexEditor.value = v.substring(0, s) + '  ' + v.substring(latexEditor.selectionEnd);
+    latexEditor.selectionStart = latexEditor.selectionEnd = s + 2;
+  }
+});
+
+// ---- INIT ----
+(async () => {
+  const params = new URLSearchParams(window.location.search);
+  state.templateId = params.get('template_id');
+
+  if (!state.templateId) {
+    toast('No template selected. Go back and pick one.', 'error');
+    tplBadge.textContent = 'No template';
+    sbTpl.textContent = 'Template: none';
+    return;
+  }
+
+  await loadTemplate(state.templateId);
+  updateEditorStats();
+})();
+</script>
+</body>
+</html>
