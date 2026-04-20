@@ -273,6 +273,47 @@ def _fix_center_trailing_linebreak(latex_code: str) -> str:
     return _CENTER_TRAILING_BREAK_RE.sub(_repl, latex_code, count=1)
 
 
+_EMPTY_SUBHEADING_LIST_RE = re.compile(
+    r"(?ms)^[ \t]*\\section\s*\{[^}]+\}\s*"
+    r"\\resumeSubHeadingListStart\s*\\resumeSubHeadingListEnd\s*"
+)
+
+
+def _remove_empty_resume_sections(latex_code: str) -> str:
+    return _EMPTY_SUBHEADING_LIST_RE.sub("", latex_code)
+
+
+def _escape_plaintext_ampersands_in_body(latex_code: str) -> str:
+    parts = latex_code.split("\\begin{document}", 1)
+    if len(parts) != 2:
+        return latex_code
+
+    preamble, body = parts
+    body = re.sub(r'(?<!\\)&', r'\\&', body)
+    return preamble + "\\begin{document}" + body
+
+
+_AT_MACRO_BODY_RE = re.compile(r'\\[A-Za-z@]*@[A-Za-z@]*')
+
+
+def _remove_at_macros_from_body(latex_code: str) -> str:
+    """
+    Strip internal LaTeX @-macros (e.g. \\check@nocorr@) from the document *body*.
+    These are forbidden outside \\makeatletter…\\makeatother and cause a fatal
+    'Forbidden control sequence' error in tectonic and pdflatex.
+    Preamble is left untouched (\\makeatletter is legitimate there).
+    """
+    parts = latex_code.split("\\begin{document}", 1)
+    if len(parts) == 2:
+        preamble, body = parts
+        body = _AT_MACRO_BODY_RE.sub("", body)
+        body = re.sub(r'(?<!%)\\nocorrlist\b', "", body)
+        body = re.sub(r'(?<!%)\\nocorr\b', "", body)
+        return preamble + "\\begin{document}" + body
+    # No \\begin{document} — sanitise whole string (fragment / plain body)
+    return _AT_MACRO_BODY_RE.sub("", latex_code)
+
+
 def _find_pdflatex() -> Optional[str]:
     """
     Resolve pdflatex executable. shutil.which misses MiKTeX when the server is started
@@ -459,6 +500,9 @@ def compile_latex(latex_code: str) -> dict:
     latex_code = _fix_titleformat_titlerule_brackets(latex_code)
     latex_code = _fix_preamble_body_color(latex_code)
     latex_code = _fix_center_trailing_linebreak(latex_code)
+    latex_code = _remove_empty_resume_sections(latex_code)
+    latex_code = _escape_plaintext_ampersands_in_body(latex_code)
+    latex_code = _remove_at_macros_from_body(latex_code)
     tex_file.write_text(latex_code, encoding="utf-8")
 
     # ── 1. pdflatex ────────────────────────────────────────────────────────

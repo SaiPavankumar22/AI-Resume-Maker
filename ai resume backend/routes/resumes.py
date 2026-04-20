@@ -28,6 +28,7 @@ class GenerateRequest(BaseModel):
     template_id: str
     user_data: Dict[str, Any]
     chat_instruction: Optional[str] = ""
+    latex_code: Optional[str] = ""
 
 
 class GenerateResponse(BaseModel):
@@ -95,6 +96,7 @@ async def generate_resume(req: GenerateRequest):
             template_latex=template["latex_code"],
             user_data=req.user_data,
             chat_instruction=req.chat_instruction or "",
+            current_latex_code=req.latex_code or "",
         )
     except Exception as e:
         logger.error("LLM error: %s", e)

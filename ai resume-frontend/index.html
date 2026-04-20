@@ -698,11 +698,11 @@ function renderTemplates(templates) {
       </div>`;
 
     card.querySelector('.card-select-btn').addEventListener('click', () => {
-      window.location.href = `/ai%20resume-frontend/editor.html?template_id=${tpl.id}`;
+      window.location.href = `/editor?template_id=${tpl.id}`;
     });
     card.addEventListener('click', (e) => {
       if (e.target.classList.contains('card-select-btn')) return;
-      window.location.href = `/ai%20resume-frontend/editor.html?template_id=${tpl.id}`;
+      window.location.href = `/editor?template_id=${tpl.id}`;
     });
 
     grid.appendChild(card);

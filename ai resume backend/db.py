@@ -1,9 +1,14 @@
 import logging
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
 logger = logging.getLogger(__name__)
+
+load_dotenv(dotenv_path=Path(__file__).with_name(".env"))
 
 MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "resume_builder")

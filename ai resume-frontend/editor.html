@@ -609,7 +609,7 @@
 
 <!-- TOP BAR -->
 <div class="topbar">
-  <a href="/ai%20resume-frontend/index.html" class="topbar-logo">
+  <a href="/" class="topbar-logo">
     <div class="logo-icon">R</div>
     <span class="logo-text">Resume<span>Forge</span></span>
   </a>
@@ -621,13 +621,16 @@
     <span id="statusText">Ready</span>
   </div>
   <div class="topbar-sep"></div>
+  <button class="btn" id="compileTopBtn" style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2);font-size:12px;" title="Compile current LaTeX to PDF">
+    ▶ Compile
+  </button>
   <button class="btn btn-download" id="downloadBtn" disabled>
     ↓ Download PDF
   </button>
   <button class="btn btn-generate" id="generateBtn">
     ⚡ Generate
   </button>
-  <a href="/ai%20resume-frontend/index.html" class="btn btn-back">← Templates</a>
+  <a href="/" class="btn btn-back">← Templates</a>
 </div>
 
 <!-- WORKSPACE -->
@@ -765,6 +768,10 @@ let state = {
   debounceTimer: null,
 };
 
+function getDraftStorageKey() {
+  return `resume_draft_${state.templateId || 'default'}`;
+}
+
 // DOM refs
 const latexEditor = document.getElementById('latexEditor');
 const pdfFrame = document.getElementById('pdfFrame');
@@ -794,7 +801,7 @@ function toast(msg, type = 'success') {
 
 function setStatus(state_str) {
   statusDot.className = 'status-dot ' + state_str;
-  const labels = { loading: 'Generating…', success: 'Ready', error: 'Error', '': 'Ready' };
+  const labels = { loading: 'Generating…', success: 'Ready', error: 'Error', ready: 'Ready', '': 'Ready' };
   statusText.textContent = labels[state_str] || state_str;
 }
 
@@ -813,11 +820,52 @@ function getUserData() {
     name: document.getElementById('f-name').value,
     email: document.getElementById('f-email').value,
     phone: document.getElementById('f-phone').value,
+    location: document.getElementById('f-location').value || '',
     skills: document.getElementById('f-skills').value,
     experience: document.getElementById('f-experience').value,
     projects: document.getElementById('f-projects').value,
     education: document.getElementById('f-education').value || '',
   };
+}
+
+function saveDraft() {
+  const draft = {
+    user_data: getUserData(),
+    latex_code: latexEditor.value,
+    template_id: state.templateId,
+    template_name: state.templateName,
+    saved_at: new Date().toISOString(),
+  };
+  sessionStorage.setItem(getDraftStorageKey(), JSON.stringify(draft));
+}
+
+function restoreDraft() {
+  const raw = sessionStorage.getItem(getDraftStorageKey());
+  if (!raw) return false;
+
+  try {
+    const draft = JSON.parse(raw);
+    const userData = draft.user_data || {};
+    document.getElementById('f-name').value = userData.name || '';
+    document.getElementById('f-email').value = userData.email || '';
+    document.getElementById('f-phone').value = userData.phone || '';
+    document.getElementById('f-location').value = userData.location || '';
+    document.getElementById('f-skills').value = userData.skills || '';
+    document.getElementById('f-experience').value = userData.experience || '';
+    document.getElementById('f-projects').value = userData.projects || '';
+    document.getElementById('f-education').value = userData.education || '';
+
+    if (draft.latex_code && draft.latex_code.trim()) {
+      latexEditor.value = draft.latex_code;
+    }
+
+    updateEditorStats();
+    return true;
+  } catch (e) {
+    console.error('Failed to restore draft:', e);
+    sessionStorage.removeItem(getDraftStorageKey());
+    return false;
+  }
 }
 
 // ---- COMPILE & PREVIEW ----
@@ -846,8 +894,8 @@ async function compileAndPreview(latexCode) {
     console.log('Compilation result:', data);
     
     if (data.success && data.pdf_url) {
-      loadPDF(data.pdf_url);
-      setStatus('ready');
+      loadPDF(BASE + data.pdf_url);
+      setStatus('success');
       toast('✓ Preview compiled successfully', 'success');
     } else {
       setStatus('error');
@@ -911,14 +959,19 @@ async function loadTemplate(id) {
     state.templateName = tpl.name;
     tplBadge.textContent = tpl.name;
     sbTpl.textContent = `Template: ${tpl.name}`;
-    if (tpl.latex_code) {
+    const restoredDraft = restoreDraft();
+    if (!restoredDraft && tpl.latex_code) {
       latexEditor.value = tpl.latex_code;
       updateEditorStats();
-      // Immediately compile the template to show preview
-      await compileAndPreview(tpl.latex_code);
     }
+    pdfFrame.removeAttribute('src');
+    pdfFrame.style.display = 'none';
+    pdfPlaceholder.style.display = 'flex';
     console.log('Template loaded successfully:', tpl.name, 'ID:', id);
     toast(`Template "${tpl.name}" loaded`, 'success');
+    if (restoredDraft) {
+      toast('Previous draft restored.', 'info');
+    }
   } catch (e) {
     console.error('Failed to load template:', e);
     toast('Failed to connect to backend.', 'error');
@@ -972,18 +1025,27 @@ async function generate(chatInstruction = '') {
     if (data.latex_code) {
       latexEditor.value = data.latex_code;
       updateEditorStats();
+      saveDraft();
     }
 
-    if (data.pdf_url) {
+    if (data.compilation_success && data.pdf_url) {
       const pdfId = data.pdf_url.split('/').pop();
       state.pdfId = pdfId;
       loadPDF(BASE + data.pdf_url);
       downloadBtn.disabled = false;
       sbLast.textContent = `Last generated: ${formatTime()}`;
-    }
+      setStatus('success');
+      toast('Resume generated!', 'success');
+    } else {
+      state.pdfId = null;
+      downloadBtn.disabled = true;
+      setStatus('error');
 
-    setStatus('success');
-    toast('Resume generated!', 'success');
+      const compileLog = data.log || 'The AI generated LaTeX, but PDF compilation failed.';
+      const errorExcerpt = compileLog.replace(/\s+/g, ' ').slice(0, 280);
+      addChatMessage('system', `❌ Resume text was generated, but PDF compilation failed. ${errorExcerpt}`);
+      toast('Resume text generated, but PDF compilation failed. See chat for details.', 'error');
+    }
 
     // Auto-switch to LaTeX tab
     document.querySelector('[data-tab="editor"]').click();
@@ -1002,7 +1064,8 @@ async function generate(chatInstruction = '') {
 function loadPDF(url) {
   pdfPlaceholder.style.display = 'none';
   pdfFrame.style.display = 'block';
-  pdfFrame.src = url;
+  // Append timestamp to bust browser PDF cache
+  pdfFrame.src = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
 }
 
 // ---- CHAT ----
@@ -1087,7 +1150,7 @@ document.getElementById('chatSendBtn').addEventListener('click', sendChat);
 generateBtn.addEventListener('click', () => generate());
 generateBtn2.addEventListener('click', () => generate());
 
-// ---- COMPILE BUTTON ----
+// ---- COMPILE BUTTON (inside LaTeX tab toolbar) ----
 document.getElementById('compilePreviewBtn').addEventListener('click', () => {
   const latexCode = latexEditor.value;
   if (!latexCode.trim()) {
@@ -1103,6 +1166,18 @@ downloadBtn.addEventListener('click', () => {
   window.open(`${BASE}/download/${state.pdfId}`, '_blank');
 });
 
+// ---- TOPBAR COMPILE BUTTON ----
+document.getElementById('compileTopBtn').addEventListener('click', () => {
+  const latexCode = latexEditor.value;
+  if (!latexCode.trim()) {
+    toast('No LaTeX code to compile. Generate a resume first.', 'error');
+    return;
+  }
+  setStatus('loading');
+  statusText.textContent = 'Compiling…';
+  compileAndPreview(latexCode);
+});
+
 // ---- COPY LATEX ----
 document.getElementById('copyLatexBtn').addEventListener('click', () => {
   navigator.clipboard.writeText(latexEditor.value);
@@ -1112,8 +1187,13 @@ document.getElementById('copyLatexBtn').addEventListener('click', () => {
 // ---- LATEX EDITOR EVENTS ----
 latexEditor.addEventListener('input', () => {
   updateEditorStats();
-  // Editor is now just for manual editing - no auto-compile
+  saveDraft();
 });
+
+['f-name', 'f-email', 'f-phone', 'f-location', 'f-skills', 'f-experience', 'f-projects', 'f-education']
+  .forEach(id => {
+    document.getElementById(id).addEventListener('input', saveDraft);
+  });
 
 // ---- RESIZE ----
 const handle = document.getElementById('resizeHandle');
