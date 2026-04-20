@@ -980,7 +980,9 @@ async function loadTemplate(id) {
 }
 
 // ---- GENERATE ----
-async function generate(chatInstruction = '') {
+// isChatEdit=true  → surgical edit: send current latex, make targeted changes
+// isChatEdit=false → fresh generate: fill the template from scratch
+async function generate(chatInstruction = '', isChatEdit = false) {
   if (state.generating) return;
   
   // Validate template_id is set
@@ -994,18 +996,23 @@ async function generate(chatInstruction = '') {
   generateBtn.disabled = true;
   generateBtn2.disabled = true;
   setStatus('loading');
+  if (isChatEdit) {
+    statusText.textContent = 'Applying change\u2026';
+  } else {
+    statusText.textContent = 'Generating\u2026';
+  }
 
-  console.log('Generating resume with template_id:', state.templateId);
   const payload = {
     template_id: state.templateId,
     user_data: getUserData(),
     chat_instruction: chatInstruction,
   };
 
-  // If we have existing latex, include it
-  if (latexEditor.value.trim()) {
-    payload.latex_code = latexEditor.value;
+  if (isChatEdit) {
+    // Chat edit: always pass current LaTeX so the LLM does a surgical edit
+    payload.latex_code = latexEditor.value.trim() || '';
   }
+  // Fresh generate: do NOT send latex_code — backend fills the template cleanly
 
   try {
     const res = await fetch(`${BASE}/generate`, {
@@ -1035,7 +1042,7 @@ async function generate(chatInstruction = '') {
       downloadBtn.disabled = false;
       sbLast.textContent = `Last generated: ${formatTime()}`;
       setStatus('success');
-      toast('Resume generated!', 'success');
+      toast(isChatEdit ? '\u2713 Change applied!' : '\u2713 Resume generated!', 'success');
     } else {
       state.pdfId = null;
       downloadBtn.disabled = true;
@@ -1043,7 +1050,7 @@ async function generate(chatInstruction = '') {
 
       const compileLog = data.log || 'The AI generated LaTeX, but PDF compilation failed.';
       const errorExcerpt = compileLog.replace(/\s+/g, ' ').slice(0, 280);
-      addChatMessage('system', `❌ Resume text was generated, but PDF compilation failed. ${errorExcerpt}`);
+      addChatMessage('system', `\u274c Resume text was generated, but PDF compilation failed. ${errorExcerpt}`);
       toast('Resume text generated, but PDF compilation failed. See chat for details.', 'error');
     }
 
@@ -1053,7 +1060,7 @@ async function generate(chatInstruction = '') {
   } catch (e) {
     setStatus('error');
     toast(`Generation failed: ${e.message}`, 'error');
-    addChatMessage('ai', `❌ Generation failed: ${e.message}`);
+    addChatMessage('ai', `\u274c Generation failed: ${e.message}`);
   } finally {
     state.generating = false;
     generateBtn.disabled = false;
@@ -1119,6 +1126,12 @@ async function sendChat() {
   const instruction = chatInput.value.trim();
   if (!instruction) return;
 
+  // Require a generated resume before chat edits
+  if (!latexEditor.value.trim()) {
+    toast('Generate a resume first before using the chat.', 'info');
+    return;
+  }
+
   chatInput.value = '';
   addChatMessage('user', instruction);
 
@@ -1129,9 +1142,10 @@ async function sendChat() {
   document.querySelector('[data-tab="chat"]').click();
 
   try {
-    await generate(instruction);
+    // isChatEdit=true → surgical edit on the current LaTeX
+    await generate(instruction, true);
     typing.remove();
-    addChatMessage('ai', `Done! Applied: <em>"${instruction}"</em>. Check the LaTeX editor and PDF preview.`);
+    addChatMessage('ai', `Done! Applied: <em>"${instruction}"</em>. The PDF preview has been updated.`);
   } catch (e) {
     typing.remove();
     addChatMessage('ai', `❌ Something went wrong. Try again.`);
